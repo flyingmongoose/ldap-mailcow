@@ -46,6 +46,7 @@ def sync():
         x[1]['mail'][0].decode(),
         x[1]['cn'][0].decode(),
         False if int(x[1]['USERACCOUNTCONTROL'][0].decode()) & 0b10 else True), ldap_results)
+    logging.info (f"DrLight int(x[1]: {int(x[1])}")
 
     filedb.session_time = datetime.datetime.now()
 
