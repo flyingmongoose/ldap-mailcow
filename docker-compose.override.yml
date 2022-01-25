@@ -1,0 +1,31 @@
+version: '2.1'
+services:
+
+    ldap-mailcow:
+     image: programmierus/ldap-mailcow
+     network_mode: host
+     container_name: mailcowcustomized_ldap-mailcow
+     depends_on:
+      - nginx-mailcow
+      - sogo-mailcow
+      - dovecot-mailcow
+      - dockerapi-mailcow
+      - postfix-mailcow
+      - mysql-mailcow
+      - clamd-mailcow
+      - rspamd-mailcow
+      - acme-mailcow
+     volumes:
+      - ./data/ldap:/db:rw
+      - ./data/conf/dovecot:/conf/dovecot:rw
+      - ./data/conf/sogo:/conf/sogo:rw
+     environment:
+      - LDAP-MAILCOW_LDAP_URI=ldap://...
+      - LDAP-MAILCOW_LDAP_BASE_DN=DC=...
+      - LDAP-MAILCOW_LDAP_BIND_DN=CN=Admin,CN=Users,...
+      - LDAP-MAILCOW_LDAP_BIND_DN_PASSWORD=
+      - LDAP-MAILCOW_API_HOST=https://
+      - LDAP-MAILCOW_API_KEY=''
+      - LDAP-MAILCOW_SYNC_INTERVAL=3600
+      - LDAP-MAILCOW_LDAP_FILTER=(&(mail=*@domain.org)(objectClass=user))
+      - LDAP-MAILCOW_SOGO_LDAP_FILTER=((objectClass='user') AND (mail='*@domain.org'))
