@@ -1,0 +1,2 @@
+See UI_FOOTER in redis of mailcow (example):
+<center>Работает на <a href="https://mailcow.email/">MailCow Dockerized </a> | <a href="https://kgilc.ru">ОАО "КГИЛЦ"</a> © 2021 - <script>document.querySelector('.rot-enc center').appendChild(document.createTextNode(new Date().getFullYear()))</script></center>
