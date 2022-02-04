@@ -1,3 +1,5 @@
+Tested at RC version 1.5.2 with Mailcow-dockerized.
+
 DB prefix must be **roundcube_**
 
 Install Roundcube Global Addressbook plugin https://github.com/johndoh/roundcube-globaladdressbook
