@@ -93,7 +93,7 @@ CREATE DEFINER=`mailcow`@`%` TRIGGER `mailbox_after_delete` AFTER DELETE ON `mai
 CALL `sync_contacts_with_view`();
 END;
 ```
-Not active aliases and mailbox won't be shown in global addressbook.
+***Not active aliases and mailbox won't be shown in global addressbook.***
 
 ???
 PROFIT!!!
