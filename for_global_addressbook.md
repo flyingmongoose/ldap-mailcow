@@ -1,10 +1,12 @@
-БД prefix должен быть **roundcube_**
+DB prefix must be **roundcube_**
 
-В roundcube устанавливаем plugin https://github.com/johndoh/roundcube-globaladdressbook
+Install Roundcube Global Addressbook plugin https://github.com/johndoh/roundcube-globaladdressbook
 
-Создаем хотя бы одну запись в новой глобальной адресной книге и смотрим в таблице roundcube_contacts user_id пользователя глобальной адресной книги. В SQL коде ниже это значение 5. Меняем на свое.
+Make at least one record to global addressbook and check ***user_id*** of global addressbook in ***table roundcube_contacts***
 
-Создаем в БД view:
+SQL code below contains ***5*** as ***user_id***. You must change it to yours.
+
+Make a view in mailcow DB:
 ```sql
 CREATE
     ALGORITHM = UNDEFINED
@@ -37,7 +39,7 @@ SELECT
   5 as `user_id`
   FROM `mailcow`.`alias` WHERE `mailcow`.`alias`.`address` != `mailcow`.`alias`.`goto` and `mailcow`.`alias`.`active`=1
   ```
-  Создаем процедуру:
+Make a procedure in mailcow DB:
   ```sql
 CREATE DEFINER=`mailcow`@`%` PROCEDURE `sync_contacts_with_view`()
 LANGUAGE SQL
@@ -68,7 +70,7 @@ WHERE   user_id=5 and words NOT IN (SELECT binary words FROM roundcube_contacts_
 
 END;
   ```
-Создаем триггеры для таблиц alias и mailbox:
+Make triggers for tables alias and mailbox:
 ```sql
 CREATE DEFINER=`mailcow`@`%` TRIGGER `alias_after_insert` AFTER INSERT ON `alias` FOR EACH ROW BEGIN
 CALL `sync_contacts_with_view`();
@@ -89,4 +91,5 @@ CREATE DEFINER=`mailcow`@`%` TRIGGER `mailbox_after_delete` AFTER DELETE ON `mai
 CALL `sync_contacts_with_view`();
 END;
 ```
-Тестируем и радуемся.
+???
+PROFIT!!!
