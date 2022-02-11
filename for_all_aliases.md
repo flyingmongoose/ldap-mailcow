@@ -30,5 +30,7 @@ CALL `sync_contacts_with_view`();
 CALL `all_alias_update`();
 END;
 ```
+**To avoid sql stack errors make surу that thread_stack is set with 256K or higher in /data/conf/mysql/my.cnf**
+
 ???
 PROFIT!!!
