@@ -10,12 +10,12 @@ services:
       - ./data/conf/dovecot:/conf/dovecot:rw
       - ./data/conf/sogo:/conf/sogo:rw
     environment:
-      - LDAP-MAILCOW_LDAP_URI=ldap://dc.asu.loc
-      - LDAP-MAILCOW_LDAP_BASE_DN=DC=asu,DC=loc
-      - LDAP-MAILCOW_LDAP_BIND_DN=mail@asu.loc
-      - LDAP-MAILCOW_LDAP_BIND_DN_PASSWORD=9HbUJCWQz0POkbm4FdFV
-      - LDAP-MAILCOW_API_HOST=https://mail-new.arcticsu.ru
-      - LDAP-MAILCOW_API_KEY=6AB8C4-C5D52F-3C8CEE-19D30B-849B2F
+      - LDAP-MAILCOW_LDAP_URI=ldap://
+      - LDAP-MAILCOW_LDAP_BASE_DN=
+      - LDAP-MAILCOW_LDAP_BIND_DN=m
+      - LDAP-MAILCOW_LDAP_BIND_DN_PASSWORD=
+      - LDAP-MAILCOW_API_HOST=
+      - LDAP-MAILCOW_API_KEY=
       - LDAP-MAILCOW_SYNC_INTERVAL=3600
       - LDAP-MAILCOW_LDAP_FILTER=(&(mail=*)(objectClass=user))
       - LDAP-MAILCOW_SOGO_LDAP_FILTER=((objectClass='user') AND (mail='*@domain.org'))
