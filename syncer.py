@@ -41,19 +41,20 @@ def sync():
 
         ldap_results = ldap_connector.search_s(config['LDAP_BASE_DN'], ldap.SCOPE_SUBTREE,
                     config['LDAP_FILTER'],
-                    ['mail', 'cn', 'userAccountControl'])
+                    ['mail', 'cn', 'st', 'userAccountControl'])
 
         ldap_results = map(lambda x: (
             x[1]['mail'][0].decode(),
             x[1]['cn'][0].decode(),
+            x[1]['st'][0].decode(),
             False if int(x[1]['userAccountControl'][0].decode()) & 0b10 else True), ldap_results)
 
         filedb.session_time = datetime.datetime.now()
 
-        for (email, ldap_name, ldap_active) in ldap_results:
+        for (email, ldap_name, ldap_quota, ldap_active) in ldap_results:
 
                 (db_user_exists, db_user_active) = filedb.check_user(email)
-                (api_user_exists, api_user_active, api_name) = api.check_user(email)
+                (api_user_exists, api_user_active, api_name, api_quota) = api.check_user(email)
 
                 unchanged = True
 
@@ -64,8 +65,8 @@ def sync():
                     unchanged = False
 
                 if not api_user_exists:
-                    api.add_user(email, ldap_name, ldap_active)
-                    (api_user_exists, api_user_active, api_name) = (True, ldap_active, ldap_name)
+                    api.add_user(email, ldap_name, ldap_quota, ldap_active)
+                    (api_user_exists, api_user_active, api_name, api_quota) = (True, ldap_active, ldap_name, ldap_quota)
                     logging.info (f"Added Mailcow user: {email} (Active: {ldap_active})")
                     unchanged = False
 
@@ -84,13 +85,21 @@ def sync():
                     logging.info (f"Changed name of {email} in Mailcow to {ldap_name}")
                     unchanged = False
 
+                '''api_quota_calc = int(api_quota)
+                ldap_quota_calc = int(ldap_quota)*1024*1024'''
+
+                if int(api_quota) != int(ldap_quota)*1024*1024:
+                    api.edit_user(email, quota=ldap_quota)
+                    logging.info (f"Quota of {email} in Mailcow is set to {ldap_quota}")
+                    unchanged = False
+
                 if unchanged:
                     logging.info (f"Checked user {email}, unchanged")
     except Exception:
         pass
 
     for email in filedb.get_unchecked_active_users():
-        (api_user_exists, api_user_active, _) = api.check_user(email)
+        (api_user_exists, api_user_active, _, _) = api.check_user(email)
 
         if (api_user_active and api_user_active):
             api.edit_user(email, active=False)

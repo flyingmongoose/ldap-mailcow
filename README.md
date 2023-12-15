@@ -21,9 +21,9 @@ A python script periodically checks and creates new LDAP accounts and deactivate
 
     ```yaml
     ldap-mailcow:
-        image: programmierus/ldap-mailcow
+        image: drlight17/ldap-mailcow
         network_mode: host
-        container_name: mailcowcustomized_ldap-mailcow
+        container_name: mailcowdockerized_ldap-mailcow
         depends_on:
             - nginx-mailcow
         volumes:
@@ -90,10 +90,3 @@ As a side-effect, It will also allow logging into mailcow UI using mailcow app p
 
 Users from your LDAP directory will be added (and deactivated if disabled/not found) to your mailcow database. Not vice-versa, and this is by design.
 
-## Customizations and Integration support
-
-External authentication (identity federation) is an enterprise feature [for mailcow](https://github.com/mailcow/mailcow-dockerized/issues/2316#issuecomment-491212921). That’s why I developed an external solution, and it is unlikely that it’ll be ever directly integrated into mailcow.
-
-I’ve created this tool because I needed it for my regular work. You are free to use it for commercial needs. Please understand that I can work on issues only if they fall within the scope of my current work interests or if I’ll have some available free time (never happened for many years). I’ll do my best to review submitted PRs ASAP, though.
-
-**You can always [contact me](mailto:programmierus@gmail.com) to help you with the integration or for custom modifications on a paid basis. My current hourly rate (ActivityWatch tracked) is 100,-€ with 3h minimum commitment.**
