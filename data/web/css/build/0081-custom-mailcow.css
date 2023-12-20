@@ -1,0 +1,21 @@
+/*hide FIDO2/Webauth login button*/
+#fido2-login {
+    display:none;
+}
+/*hide user change password related links, buttons, divs*/
+#collapse-tab-medit > form > div:nth-child(20), #collapse-tab-medit > form > div:nth-child(19), a[href="#pwChangeModal"], #collapse-tab-user-auth > div:nth-child(1) > div.col-md-5.col-12 > hr, #collapse-tab-medit > form > div:nth-child(13), #collapse-tab-medit > form > div:nth-child(14) {
+    display: none;
+}
+/*hide sogo restart menu link*/
+a[data-bs-target="#RestartContainer"] {
+    display:none;
+}
+/*hide templates mailbox menu link, add, delete mailbox button, account actions*/
+button[data-bs-target="#tab-templates-mbox"],button[data-bs-target="#tab-templates-domains"],a[data-bs-target="#addMailboxModal"], a[data-api-url="delete/mailbox"], #collapse-tab-mailboxes > div.mass-actions-mailbox.mb-4.d-none.d-sm-block > div.btn-group.d-none.d-lg-flex > div:nth-child(4) > a {
+    display:none;
+}
+/*custom disabled div*/
+.custom_disabled_div {
+    pointer-events: none;
+    opacity: 0.4;
+}
