@@ -43,6 +43,9 @@ SELECT
   ```
 Make a procedure in mailcow DB:
   ```sql
+USE `mailcow`;
+
+DELIMITER //
 CREATE DEFINER=`mailcow`@`%` PROCEDURE `sync_contacts_with_view`()
 LANGUAGE SQL
 NOT DETERMINISTIC
@@ -70,7 +73,8 @@ DELETE
 FROM    roundcube_contacts
 WHERE   user_id=5 and words NOT IN (SELECT binary words FROM roundcube_contacts_view);
 
-END;
+END//
+DELIMITER ;
   ```
 Make triggers for tables alias and mailbox:
 ```sql
