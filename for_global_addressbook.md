@@ -23,7 +23,7 @@ SELECT
       `mailcow`.`mailbox`.`username` AS `email`,
   `mailcow`.`mailbox`.`name` AS `firstname`,
   '' AS `surname`,
-  '' AS `vcard`,
+  REPLACE(json_extract(`mailbox`.`custom_attributes`,'$.vcard'),'\\r\\n',CHAR(10)) AS `vcard`,
   concat(`mailcow`.`mailbox`.`name`, ' ', `mailcow`.`mailbox`.`username`) as `words`,
   5 as `user_id`
   FROM `mailcow`.`mailbox` where `mailcow`.`mailbox`.`active`=1

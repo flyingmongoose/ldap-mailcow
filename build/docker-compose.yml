@@ -28,15 +28,19 @@ services:
 #        source: ./filedb.py
 #        target: /filedb.py
     environment:
-      - LDAP-MAILCOW_LDAP_URI=ldap://
-      - LDAP-MAILCOW_LDAP_BASE_DN=
-      - LDAP-MAILCOW_LDAP_BIND_DN=
-      - LDAP-MAILCOW_LDAP_BIND_DN_PASSWORD=
-      - LDAP-MAILCOW_API_HOST=
-      - LDAP-MAILCOW_API_KEY=
+      - LDAP-MAILCOW_LDAP_URI=ldap://192.168.101.201
+      - LDAP-MAILCOW_LDAP_BASE_DN=OU=ASU,DC=asu,DC=loc
+      - LDAP-MAILCOW_LDAP_BIND_DN=mail@asu.loc
+      - LDAP-MAILCOW_LDAP_BIND_DN_PASSWORD=9HbUJCWQz0POkbm4FdFV
+      - LDAP-MAILCOW_API_HOST=https://mail-new.arcticsu.ru
+      - LDAP-MAILCOW_API_KEY=783CFF-E4980C-BA04EE-EB8592-F0DF23
       - LDAP-MAILCOW_SYNC_INTERVAL=3600
       - LDAP-MAILCOW_LDAP_FILTER=(&(mail=*)(objectClass=user))
+# set LDAP-MAILCOW_LDAP_AVA_ATTR and LDAP-MAILCOW_LDAP_QUOTA_ATTR to any random string value if you don't want to asu these attributes
+      - LDAP-MAILCOW_LDAP_AVA_ATTR=jpegPhoto
+      - LDAP-MAILCOW_LDAP_QUOTA_ATTR=st
       - LDAP-MAILCOW_SOGO_LDAP_FILTER=((objectClass='user') AND (mail='*@domain.org'))
+
 #    restart: always
     network_mode: host
 

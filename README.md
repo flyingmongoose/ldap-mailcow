@@ -38,6 +38,8 @@ A python script periodically checks and creates new LDAP accounts and deactivate
             - LDAP-MAILCOW_API_HOST=https://mailcow.example.local
             - LDAP-MAILCOW_API_KEY=XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX
             - LDAP-MAILCOW_SYNC_INTERVAL=300
+            - LDAP-MAILCOW_LDAP_AVA_ATTR=jpegPhoto
+            - LDAP-MAILCOW_LDAP_QUOTA_ATTR=st
             - LDAP-MAILCOW_LDAP_FILTER=(&(objectClass=user)(objectCategory=person)(memberOf:1.2.840.113556.1.4.1941:=CN=Group,CN=Users,DC=example DC=local))
             - LDAP-MAILCOW_SOGO_LDAP_FILTER=objectClass='user' AND objectCategory='person' AND memberOf:1.2.840.113556.1.4.1941:='CN=Group,CN=Users,DC=example DC=local'
     ```
@@ -51,8 +53,11 @@ A python script periodically checks and creates new LDAP accounts and deactivate
     * `LDAP-MAILCOW_API_HOST` - mailcow API url. Make sure it's enabled and accessible from within the container for both reads and writes
     * `LDAP-MAILCOW_API_KEY` - mailcow API key (read/write)
     * `LDAP-MAILCOW_SYNC_INTERVAL` - interval in seconds between LDAP synchronizations
+    * `LDAP-MAILCOW_LDAP_AVA_ATTR` - LDAP attr, which contains user photo, leave empty or random string if you won't use it
+    * `LDAP-MAILCOW_LDAP_QUOTA_ATTR` - LDAP attr, which contains user mail quota, leave empty or random string if you won't use it
     * **Optional** LDAP filters (see example above). SOGo uses special syntax, so you either have to **specify both or none**:
         * `LDAP-MAILCOW_LDAP_FILTER` - LDAP filter to apply, defaults to `(&(objectClass=user)(objectCategory=person))`
+
         * `LDAP-MAILCOW_SOGO_LDAP_FILTER` - LDAP filter to apply for SOGo ([special syntax](https://sogo.nu/files/docs/SOGoInstallationGuide.html#_authentication_using_ldap)), defaults to `objectClass='user' AND objectCategory='person'`
 
 4. Start additional container: `docker-compose up -d ldap-mailcow`
@@ -89,4 +94,19 @@ As a side-effect, It will also allow logging into mailcow UI using mailcow app p
 ### Two-way sync
 
 Users from your LDAP directory will be added (and deactivated if disabled/not found) to your mailcow database. Not vice-versa, and this is by design.
+
+
+### cp1251 and other non-latin charsets in generated from mailboxes GAL
+
+In order to be shown correctly there must be changed [this line](https://github.com/mailcow/mailcow-dockerized/blob/master/data/web/inc/functions.mailbox.inc.php#L3336):
+
+```php
+ $stmt = $pdo->prepare("UPDATE `mailbox`
+              SET `custom_attributes` = :custom_attributes
+              WHERE username = :username");
+            $stmt->execute(array(
+              ":username" => $mailbox,
+              ":custom_attributes" => json_encode($attributes, JSON_UNESCAPED_UNICODE)
+            ));
+```
 

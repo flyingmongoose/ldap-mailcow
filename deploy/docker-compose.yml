@@ -17,6 +17,9 @@ services:
       - LDAP-MAILCOW_API_HOST=
       - LDAP-MAILCOW_API_KEY=
       - LDAP-MAILCOW_SYNC_INTERVAL=3600
+# set LDAP-MAILCOW_LDAP_AVA_ATTR and LDAP-MAILCOW_LDAP_QUOTA_ATTR to any random string value if you don't want to asu these attributes
+      - LDAP-MAILCOW_LDAP_AVA_ATTR=jpegPhoto
+      - LDAP-MAILCOW_LDAP_QUOTA_ATTR=st
       - LDAP-MAILCOW_LDAP_FILTER=(&(mail=*)(objectClass=user))
       - LDAP-MAILCOW_SOGO_LDAP_FILTER=((objectClass='user') AND (mail='*@domain.org'))
     restart: always

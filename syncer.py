@@ -3,6 +3,8 @@ import ldap
 
 import filedb, api
 
+import base64
+
 from string import Template
 from pathlib import Path
 
@@ -26,6 +28,8 @@ def main():
 
     api.api_host = config['API_HOST']
     api.api_key = config['API_KEY']
+    api.ava_attr = config['LDAP_AVA_ATTR']
+    api.quota_attr = config['LDAP_QUOTA_ATTR']
 
     while (True):
         sync()
@@ -41,22 +45,27 @@ def sync():
 
         ldap_results = ldap_connector.search_s(config['LDAP_BASE_DN'], ldap.SCOPE_SUBTREE,
                     config['LDAP_FILTER'],
-                    ['mail', 'cn', 'st', 'userAccountControl'])
+                    ['mail', 'cn', 'st', 'description', config['LDAP_AVA_ATTR'], 'userAccountControl'])
 
         ldap_results = map(lambda x: (
             x[1]['mail'][0].decode(),
             x[1]['cn'][0].decode(),
-            x[1]['st'][0].decode(),
+            0 if config['LDAP_QUOTA_ATTR'] not in x[1] else x[1][config['LDAP_QUOTA_ATTR']][0].decode(),
+            '' if "description" not in x[1] else x[1]['description'][0].decode(),
+            b'' if config['LDAP_AVA_ATTR'] not in x[1] else base64.b64encode(x[1][config['LDAP_AVA_ATTR']][0]),
             False if int(x[1]['userAccountControl'][0].decode()) & 0b10 else True), ldap_results)
+
 
         filedb.session_time = datetime.datetime.now()
 
-        for (email, ldap_name, ldap_quota, ldap_active) in ldap_results:
+        for (email, ldap_name, ldap_quota, ldap_description, ldap_avatar, ldap_active) in ldap_results:
 
+                api_custom_attr = {}
                 (db_user_exists, db_user_active) = filedb.check_user(email)
-                (api_user_exists, api_user_active, api_name, api_quota) = api.check_user(email)
+                (api_user_exists, api_user_active, api_name, api_quota, api_custom_attr) = api.check_user(email)
 
                 unchanged = True
+                changed_custom = False
 
                 if not db_user_exists:
                     filedb.add_user(email, ldap_active)
@@ -66,9 +75,11 @@ def sync():
 
                 if not api_user_exists:
                     api.add_user(email, ldap_name, ldap_quota, ldap_active)
-                    (api_user_exists, api_user_active, api_name, api_quota) = (True, ldap_active, ldap_name, ldap_quota)
+                    api_custom_attr = {}
+                    (api_user_exists, api_user_active, api_name, api_quota, api_custom_attr['description'], api_custom_attr[config['LDAP_AVA_ATTR']]) = (True, ldap_active, ldap_name, ldap_quota, ldap_description, ldap_avatar)
                     logging.info (f"Added Mailcow user: {email} (Active: {ldap_active})")
                     unchanged = False
+                    pass
 
                 if db_user_active != ldap_active:
                     filedb.user_set_active_to(email, ldap_active)
@@ -76,7 +87,7 @@ def sync():
                     unchanged = False
 
                 if api_user_active != ldap_active:
-                    api.edit_user(email, active=ldap_active)
+                    api.edit_user(email, name=ldap_name, active=ldap_active)
                     logging.info (f"{'Activated' if ldap_active else 'Deactived'} {email} in Mailcow")
                     unchanged = False
 
@@ -85,21 +96,44 @@ def sync():
                     logging.info (f"Changed name of {email} in Mailcow to {ldap_name}")
                     unchanged = False
 
-                '''api_quota_calc = int(api_quota)
-                ldap_quota_calc = int(ldap_quota)*1024*1024'''
-
                 if int(api_quota) != int(ldap_quota)*1024*1024:
-                    api.edit_user(email, quota=ldap_quota)
+                    api.edit_user(email, name=ldap_name, quota=ldap_quota)
                     logging.info (f"Quota of {email} in Mailcow is set to {ldap_quota}")
                     unchanged = False
 
+                if not api_custom_attr:
+                    api_custom_attr = {}
+
+                if 'description' not in api_custom_attr:
+                    api_custom_attr['description'] = ''
+                        
+                if config['LDAP_AVA_ATTR'] not in api_custom_attr:
+                    api_custom_attr[config['LDAP_AVA_ATTR']] = ''.encode()
+
+                if api_custom_attr['description'] != ldap_description:
+                    logging.info (f"Changed description of {email} in Mailcow to {ldap_description}")
+                    unchanged = False
+                    changed_custom = True
+
+                if api_custom_attr[config['LDAP_AVA_ATTR']] != ldap_avatar.decode("utf-8"):
+                    logging.info (f"Changed avatar of {email} in Mailcow.")
+                    unchanged = False
+                    changed_custom = True
+
+                if changed_custom:
+                    api.edit_user(email, name=ldap_name, avatar=ldap_avatar, description=ldap_description)
+
                 if unchanged:
                     logging.info (f"Checked user {email}, unchanged")
-    except Exception:
+    except Exception as e:
+        logging.error (f"Error: {e}")
+        #sys.exit(1)
         pass
 
+    
+
     for email in filedb.get_unchecked_active_users():
-        (api_user_exists, api_user_active, _, _) = api.check_user(email)
+        (api_user_exists, api_user_active, _, _, _) = api.check_user(email)
 
         if (api_user_active and api_user_active):
             api.edit_user(email, active=False)
@@ -141,7 +175,9 @@ def read_config():
         'LDAP-MAILCOW_LDAP_BIND_DN_PASSWORD',
         'LDAP-MAILCOW_API_HOST',
         'LDAP-MAILCOW_API_KEY',
-        'LDAP-MAILCOW_SYNC_INTERVAL'
+        'LDAP-MAILCOW_SYNC_INTERVAL',
+        'LDAP-MAILCOW_LDAP_AVA_ATTR',
+        'LDAP-MAILCOW_LDAP_QUOTA_ATTR'
     ]
 
     config = {}

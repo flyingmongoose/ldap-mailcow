@@ -1,6 +1,10 @@
 import random, string, sys
 import requests
 
+import vobject
+
+import time
+
 def __post_request(url, json_data):
     api_url = f"{api_host}/{url}"
     headers = {'X-API-Key': api_key, 'Content-type': 'application/json'}
@@ -33,12 +37,22 @@ def add_user(email, name, quota, active):
 
     __post_request('api/v1/add/mailbox', json_data)
 
-def edit_user(email, active=None, name=None, quota=None):
+def edit_user(email, active=None, name=None, quota=None, avatar=None, description=None):
     attr = {}
+    
+     # vcard create
+    vcard = vobject.vCard()
+
+    o = vcard.add('email')
+    o.type_param = 'INTERNET'
+    o.value = email
+
     if (active is not None):
         attr['active'] = 1 if active else 0
     if (name is not None):
         attr['name'] = name
+        o = vcard.add('fn')
+        o.value = name
     if (quota is not None):
         attr['quota'] = quota
     json_data = {
@@ -47,11 +61,41 @@ def edit_user(email, active=None, name=None, quota=None):
     }
     __post_request('api/v1/edit/mailbox', json_data)
 
+    # custom attr
+    attr = {'attribute': [], 'value': []}
+
+   
+
+    if (description is not None):
+        attr['attribute'].append('description')
+        attr['value'].append(description)
+        o = vcard.add('title')
+        o.value = description
+
+    if (avatar is not None):
+        attr['attribute'].append(ava_attr)
+        attr['value'].append(avatar.decode("utf-8"))
+        o = vcard.add('photo')
+        o.value = avatar.decode("utf-8")
+
+    vcard = vcard.serialize()
+    attr['attribute'].append('vcard')
+    attr['value'].append(vcard)
+
+    if attr is not {}:
+        json_data = {
+                'items': [email],
+                'attr': attr
+        }
+
+        __post_request('api/v1/edit/mailbox/custom-attribute', json_data)
+
 def __delete_user(email):
     json_data = [email]
     __post_request('api/v1/delete/mailbox', json_data)
 
 def check_user(email):
+
     url = f"{api_host}/api/v1/get/mailbox/{email}"
     headers = {'X-API-Key': api_key, 'Content-type': 'application/json'}
     req = requests.get(url, headers=headers)
@@ -62,9 +106,9 @@ def check_user(email):
         sys.exit("API get/mailbox: got response of a wrong type")
 
     if (not rsp):
-        return (False, False, None, None)
+        return (False, False, None, None, None)
 
     if 'active_int' not in rsp and rsp['type'] == 'error':
         sys.exit(f"API {url}: {rsp['type']} - {rsp['msg']}")
-    
-    return (True, bool(rsp['active_int']), rsp['name'], rsp['quota'])
+
+    return (True, bool(rsp['active_int']), rsp['name'], rsp['quota'], rsp['custom_attributes'])
