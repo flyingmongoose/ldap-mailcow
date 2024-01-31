@@ -16,7 +16,7 @@ button[data-bs-target="#tab-templates-mbox"],button[data-bs-target="#tab-templat
     display:none;
 }
 /*hide edit custom_attr buttons*/
-#add_mbox_attr_row, #mbox_attr_table > tbody td:nth-child(3), button[data-action="edit_selected"] {
+#add_mbox_attr_row, #mbox_attr_table > tbody td:nth-child(3)/*, button[data-action="edit_selected"]*/ {
     display:none!important;
 }
 /*custom disabled div*/
