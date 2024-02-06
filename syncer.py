@@ -47,6 +47,9 @@ def sync():
                     config['LDAP_FILTER'],
                     ['mail', 'cn', 'st', 'description', config['LDAP_AVA_ATTR'], 'userAccountControl'])
 
+        # exclude None items from results 
+        ldap_results = [i for i in ldap_results if i[0] is not None]
+
         ldap_results = map(lambda x: (
             x[1]['mail'][0].decode(),
             x[1]['cn'][0].decode(),
@@ -55,13 +58,13 @@ def sync():
             b'' if config['LDAP_AVA_ATTR'] not in x[1] else base64.b64encode(x[1][config['LDAP_AVA_ATTR']][0]),
             False if int(x[1]['userAccountControl'][0].decode()) & 0b10 else True), ldap_results)
 
-
         filedb.session_time = datetime.datetime.now()
 
         for (email, ldap_name, ldap_quota, ldap_description, ldap_avatar, ldap_active) in ldap_results:
-
+                
                 api_custom_attr = {}
                 (db_user_exists, db_user_active) = filedb.check_user(email)
+
                 (api_user_exists, api_user_active, api_name, api_quota, api_custom_attr) = api.check_user(email)
 
                 unchanged = True
@@ -125,6 +128,8 @@ def sync():
 
                 if unchanged:
                     logging.info (f"Checked user {email}, unchanged")
+
+
     except Exception as e:
         logging.error (f"Error: {e}")
         #sys.exit(1)

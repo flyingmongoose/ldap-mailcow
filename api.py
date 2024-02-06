@@ -5,12 +5,22 @@ import vobject
 
 import time
 
+import json
+
 def __post_request(url, json_data):
+    
     api_url = f"{api_host}/{url}"
     headers = {'X-API-Key': api_key, 'Content-type': 'application/json'}
 
     req = requests.post(api_url, headers=headers, json=json_data)
-    rsp = req.json()
+
+    # samoilov 06.02.2024 check if response is not empty
+    if req.content != b'':
+        rsp = req.json()
+    else:
+        req.close()
+        return
+    
     req.close()
 
     if isinstance(rsp, list):
@@ -21,6 +31,7 @@ def __post_request(url, json_data):
     
     if rsp['type'] != 'success':
         sys.exit(f"API {url}: {rsp['type']} - {rsp['msg']}")
+
 
 
 def add_user(email, name, quota, active):
@@ -102,8 +113,10 @@ def check_user(email):
     rsp = req.json()
     req.close()
 
+
     if not isinstance(rsp, dict):
         sys.exit("API get/mailbox: got response of a wrong type")
+    
 
     if (not rsp):
         return (False, False, None, None, None)

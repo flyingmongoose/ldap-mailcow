@@ -4,7 +4,8 @@ version: '3.9'
 services:
   ldap-mailcow:
     container_name: ldap-mailcow
-    image: drlight17/ldap-mailcow:latest
+    # change tag xxx to appropriate org
+    image: drlight17/ldap-mailcow:xxx
     volumes:
       - ./data/ldap:/db:rw
       - ./data/conf/dovecot:/conf/dovecot:rw
