@@ -7,6 +7,7 @@ import time
 
 import json
 
+
 def __post_request(url, json_data):
     api_url = f"{api_host}/{url}"
     headers = {'X-API-Key': api_key, 'Content-type': 'application/json'}
@@ -32,24 +33,26 @@ def __post_request(url, json_data):
     if rsp['type'] != 'success':
         sys.exit(f"API {url}: {rsp['type']} - {rsp['msg']}")
 
+
 def add_user(email, name, quota, active):
     password = ''.join(random.choices(string.ascii_letters + string.digits, k=20))
     json_data = {
-        'local_part':email.split('@')[0],
-        'domain':email.split('@')[1],
-        'name':name,
-        'password':password,
-        'password2':password,
+        'local_part': email.split('@')[0],
+        'domain': email.split('@')[1],
+        'name': name,
+        'password': password,
+        'password2': password,
         "quota": quota,
         "active": 1 if active else 0
     }
 
     __post_request('api/v1/add/mailbox', json_data)
 
+
 def edit_user(email, active=None, name=None, quota=None, avatar=None, description=None):
     attr = {}
-    
-     # vcard create
+
+    # vcard create
     vcard = vobject.vCard()
 
     o = vcard.add('email')
@@ -73,8 +76,6 @@ def edit_user(email, active=None, name=None, quota=None, avatar=None, descriptio
     # custom attr
     attr = {'attribute': [], 'value': []}
 
-   
-
     if (description is not None):
         attr['attribute'].append('description')
         attr['value'].append(description)
@@ -93,11 +94,12 @@ def edit_user(email, active=None, name=None, quota=None, avatar=None, descriptio
 
     if attr is not {}:
         json_data = {
-                'items': [email],
-                'attr': attr
+            'items': [email],
+            'attr': attr
         }
 
         __post_request('api/v1/edit/mailbox/custom-attribute', json_data)
+
 
 def __delete_user(email):
     json_data = [email]
@@ -125,5 +127,8 @@ def check_user(email):
 
         return (True, bool(rsp['active_int']), rsp['name'], rsp['quota'], rsp['custom_attributes'])
 
-    except requests.exceptions.ConnectionError:
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP error: {e}")
         return None
+    except requests.exceptions.ConnectionError as e:
+            return None
