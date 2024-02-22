@@ -104,7 +104,7 @@ def __delete_user(email):
     __post_request('api/v1/delete/mailbox', json_data)
 
 
-def check_user(email, retry=3):
+def check_user(email):
     url = f"{api_host}/api/v1/get/mailbox/{email}"
     headers = {'X-API-Key': api_key, 'Content-type': 'application/json'}
 
@@ -125,14 +125,5 @@ def check_user(email, retry=3):
 
         return (True, bool(rsp['active_int']), rsp['name'], rsp['quota'], rsp['custom_attributes'])
 
-    except requests.exceptions.HTTPError as e:
-        print(f"HTTP error: {e}")
+    except requests.exceptions.ConnectionError:
         return None
-    except requests.exceptions.ConnectionError as e:
-        print(f"Connection error: {e}")
-        if retry > 0:
-            print("Retrying...")
-            return check_user(email, retry=retry - 1)
-        else:
-            print("Max retries exceeded. Exiting...")
-            sys.exit(1)
