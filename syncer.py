@@ -43,11 +43,13 @@ def sync():
         ldap_connector.set_option(ldap.OPT_REFERRALS, 0)
         ldap_connector.simple_bind_s(config['LDAP_BIND_DN'], config['LDAP_BIND_DN_PASSWORD'])
 
+
         ldap_results = ldap_connector.search_s(config['LDAP_BASE_DN'], ldap.SCOPE_SUBTREE,
                     config['LDAP_FILTER'],
-                    ['mail', 'cn', 'st', 'description', config['LDAP_AVA_ATTR'], 'userAccountControl'])
+                    ['mail', 'cn', 'st', 'description', config['LDAP_AVA_ATTR']])
 
-        # exclude None items from results 
+        # exclude None items from results
+
         ldap_results = [i for i in ldap_results if i[0] is not None]
 
         ldap_results = map(lambda x: (
@@ -55,12 +57,12 @@ def sync():
             x[1]['cn'][0].decode(),
             0 if config['LDAP_QUOTA_ATTR'] not in x[1] else x[1][config['LDAP_QUOTA_ATTR']][0].decode(),
             '' if "description" not in x[1] else x[1]['description'][0].decode(),
-            b'' if config['LDAP_AVA_ATTR'] not in x[1] else base64.b64encode(x[1][config['LDAP_AVA_ATTR']][0]),
-            False if int(x[1]['userAccountControl'][0].decode()) & 0b10 else True), ldap_results)
+            b'' if config['LDAP_AVA_ATTR'] not in x[1] else base64.b64encode(x[1][config['LDAP_AVA_ATTR']][0])),
+                           ldap_results)
 
         filedb.session_time = datetime.datetime.now()
 
-        for (email, ldap_name, ldap_quota, ldap_description, ldap_avatar, ldap_active) in ldap_results:
+        for (email, ldap_name, ldap_quota, ldap_description, ldap_avatar) in ldap_results:
                 
                 api_custom_attr = {}
                 (db_user_exists, db_user_active) = filedb.check_user(email)
