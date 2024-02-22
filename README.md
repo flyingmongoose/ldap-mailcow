@@ -1,5 +1,13 @@
 # ldap-mailcow
 
+I'd like to point out that this has some very simple modification, such as removing the userAccountControl, as that is not a feature supported in LLDAP.
+
+You will still need to add ignnore configs to your LLDAP, however I have confirmed this at least works in synchronizing from LLDAP to mailcow.
+
+I will likely stop maintaining this as soon as the official mailcow LDAP support is released, the current testing version of mailcow is extremely unstable and I do not recommend it.
+
+Also, this plugin **will show api failures** it tries to execute too many too fast when a failure happens, so it throws it back at you, I've added a limiter.
+
 Adds LDAP accounts to mailcow-dockerized and enables LDAP (e.g., Active Directory) authentication.
 
 * [How does it work](#how-does-it-work)

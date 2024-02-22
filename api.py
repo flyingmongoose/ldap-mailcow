@@ -8,19 +8,19 @@ import time
 import json
 
 def __post_request(url, json_data):
-    
     api_url = f"{api_host}/{url}"
     headers = {'X-API-Key': api_key, 'Content-type': 'application/json'}
 
     req = requests.post(api_url, headers=headers, json=json_data)
 
-    # samoilov 06.02.2024 check if response is not empty
     if req.content != b'':
+        print("Response content:", req.content)  # Print response content for debugging
         rsp = req.json()
     else:
+        print("Empty response content")  # Print a message indicating empty response
         req.close()
         return
-    
+
     req.close()
 
     if isinstance(rsp, list):
@@ -28,11 +28,9 @@ def __post_request(url, json_data):
 
     if not "type" in rsp or not "msg" in rsp:
         sys.exit(f"API {url}: got response without type or msg from Mailcow API")
-    
+
     if rsp['type'] != 'success':
         sys.exit(f"API {url}: {rsp['type']} - {rsp['msg']}")
-
-
 
 def add_user(email, name, quota, active):
     password = ''.join(random.choices(string.ascii_letters + string.digits, k=20))
@@ -105,23 +103,36 @@ def __delete_user(email):
     json_data = [email]
     __post_request('api/v1/delete/mailbox', json_data)
 
-def check_user(email):
 
+def check_user(email, retry=3):
     url = f"{api_host}/api/v1/get/mailbox/{email}"
     headers = {'X-API-Key': api_key, 'Content-type': 'application/json'}
-    req = requests.get(url, headers=headers)
-    rsp = req.json()
-    req.close()
 
+    try:
+        req = requests.get(url, headers=headers)
+        req.raise_for_status()
+        rsp = req.json()
+        req.close()
 
-    if not isinstance(rsp, dict):
-        sys.exit("API get/mailbox: got response of a wrong type")
-    
+        if not isinstance(rsp, dict):
+            sys.exit("API get/mailbox: got response of a wrong type")
 
-    if (not rsp):
-        return (False, False, None, None, None)
+        if (not rsp):
+            return (False, False, None, None, None)
 
-    if 'active_int' not in rsp and rsp['type'] == 'error':
-        sys.exit(f"API {url}: {rsp['type']} - {rsp['msg']}")
+        if 'active_int' not in rsp and rsp['type'] == 'error':
+            sys.exit(f"API {url}: {rsp['type']} - {rsp['msg']}")
 
-    return (True, bool(rsp['active_int']), rsp['name'], rsp['quota'], rsp['custom_attributes'])
+        return (True, bool(rsp['active_int']), rsp['name'], rsp['quota'], rsp['custom_attributes'])
+
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP error: {e}")
+        return None
+    except requests.exceptions.ConnectionError as e:
+        print(f"Connection error: {e}")
+        if retry > 0:
+            print("Retrying...")
+            return check_user(email, retry=retry - 1)
+        else:
+            print("Max retries exceeded. Exiting...")
+            sys.exit(1)
