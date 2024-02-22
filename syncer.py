@@ -32,7 +32,6 @@ def main():
     api.api_host = config['API_HOST']
     api.api_key = config['API_KEY']
     api.ava_attr = config['LDAP_AVA_ATTR']
-    api.quota_attr = config['LDAP_QUOTA_ATTR']
 
     while (True):
         sync()
@@ -49,7 +48,8 @@ def sync():
 
         ldap_results = ldap_connector.search_s(config['LDAP_BASE_DN'], ldap.SCOPE_SUBTREE,
                                                config['LDAP_FILTER'],
-                                               ['mail', 'cn', 'st', 'description', config['LDAP_AVA_ATTR']])
+                                               ['mail', 'cn', 'st', 'description', config['LDAP_AVA_ATTR'],
+                                                'userAccountControl'])
 
         # exclude None items from results
         ldap_results = [i for i in ldap_results if i[0] is not None]
@@ -57,19 +57,19 @@ def sync():
         ldap_results = map(lambda x: (
             x[1]['mail'][0].decode(),
             x[1]['cn'][0].decode(),
-            0 if config['LDAP_QUOTA_ATTR'] not in x[1] else x[1][config['LDAP_QUOTA_ATTR']][0].decode(),
             '' if "description" not in x[1] else x[1]['description'][0].decode(),
             b'' if config['LDAP_AVA_ATTR'] not in x[1] else base64.b64encode(x[1][config['LDAP_AVA_ATTR']][0]),
-            True), ldap_results)
+            False if int(x[1]['userAccountControl'][0].decode()) & 0b10 else True), ldap_results)
 
         filedb.session_time = datetime.datetime.now()
 
-        for (email, ldap_name, ldap_quota, ldap_description, ldap_avatar, ldap_active) in ldap_results:
+        for (email, ldap_name, ldap_description, ldap_avatar, ldap_active) in ldap_results:
 
             api_custom_attr = {}
             (db_user_exists, db_user_active) = filedb.check_user(email)
 
-            (api_user_exists, api_user_active, api_name, api_quota, api_custom_attr) = api.check_user(email)
+            (api_user_exists, api_user_active, api_name, api_custom_attr['description'],
+             api_custom_attr[config['LDAP_AVA_ATTR']]) = api.check_user(email)
 
             unchanged = True
             changed_custom = False
@@ -81,11 +81,11 @@ def sync():
                 unchanged = False
 
             if not api_user_exists:
-                api.add_user(email, ldap_name, ldap_quota, ldap_active)
+                api.add_user(email, ldap_name, ldap_active)
                 api_custom_attr = {}
-                (api_user_exists, api_user_active, api_name, api_quota, api_custom_attr['description'],
+                (api_user_exists, api_user_active, api_name, api_custom_attr['description'],
                  api_custom_attr[config['LDAP_AVA_ATTR']]) = (
-                True, ldap_active, ldap_name, ldap_quota, ldap_description, ldap_avatar)
+                True, ldap_active, ldap_name, ldap_description, ldap_avatar)
                 logging.info(f"Added Mailcow user: {email} (Active: {ldap_active})")
                 unchanged = False
                 pass
@@ -103,11 +103,6 @@ def sync():
             if api_name != ldap_name:
                 api.edit_user(email, name=ldap_name)
                 logging.info(f"Changed name of {email} in Mailcow to {ldap_name}")
-                unchanged = False
-
-            if int(api_quota) != int(ldap_quota) * 1024 * 1024:
-                api.edit_user(email, name=ldap_name, quota=ldap_quota)
-                logging.info(f"Quota of {email} in Mailcow is set to {ldap_quota}")
                 unchanged = False
 
             if not api_custom_attr:
@@ -142,107 +137,46 @@ def sync():
         pass
 
     for email in filedb.get_unchecked_active_users():
-        (api_user_exists, api_user_active, _, _, _) = api.check_user(email)
+        (api_user_exists, api_user_active, _, _) = api.check_user(email)
 
         if (api_user_active and api_user_active):
             api.edit_user(email, active=False)
-            logging.info(f"Deactivated user {email} in Mailcow, not found in LDAP")
+            logging.info(f"Deactivated user {email} in Mailcow")
 
         filedb.user_set_active_to(email, False)
-        logging.info(f"Deactivated user {email} in filedb, not found in LDAP")
-
-
-def apply_config(config_file, config_data):
-    if os.path.isfile(config_file):
-        with open(config_file) as f:
-            old_data = f.read()
-
-        if old_data.strip() == config_data.strip():
-            logging.info(f"Config file {config_file} unchanged")
-            return False
-
-        backup_index = 1
-        backup_file = f"{config_file}.ldap_mailcow_bak"
-        while os.path.exists(backup_file):
-            backup_file = f"{config_file}.ldap_mailcow_bak.{backup_index}"
-            backup_index += 1
-
-        os.rename(config_file, backup_file)
-        logging.info(f"Backed up {config_file} to {backup_file}")
-
-    Path(os.path.dirname(config_file)).mkdir(parents=True, exist_ok=True)
-
-    print(config_data, file=open(config_file, 'w'))
-
-    logging.info(f"Saved generated config file to {config_file}")
-    return True
+        logging.info(f"Deactivated user {email} in filedb")
 
 
 def read_config():
-    required_config_keys = [
-        'LDAP-MAILCOW_LDAP_URI',
-        'LDAP-MAILCOW_LDAP_BASE_DN',
-        'LDAP-MAILCOW_LDAP_BIND_DN',
-        'LDAP-MAILCOW_LDAP_BIND_DN_PASSWORD',
-        'LDAP-MAILCOW_API_HOST',
-        'LDAP-MAILCOW_API_KEY',
-        'LDAP-MAILCOW_SYNC_INTERVAL',
-        'LDAP-MAILCOW_LDAP_AVA_ATTR',
-        'LDAP-MAILCOW_LDAP_QUOTA_ATTR'
-    ]
-
-    config = {}
-
-    for config_key in required_config_keys:
-        if config_key not in os.environ:
-            sys.exit(f"Required environment value {config_key} is not set")
-
-        config[config_key.replace('LDAP-MAILCOW_', '')] = os.environ[config_key]
-
-    if 'LDAP-MAILCOW_LDAP_FILTER' in os.environ and 'LDAP-MAILCOW_SOGO_LDAP_FILTER' not in os.environ:
-        sys.exit('LDAP-MAILCOW_SOGO_LDAP_FILTER is required when you specify LDAP-MAILCOW_LDAP_FILTER')
-
-    if 'LDAP-MAILCOW_SOGO_LDAP_FILTER' in os.environ and 'LDAP-MAILCOW_LDAP_FILTER' not in os.environ:
-        sys.exit('LDAP-MAILCOW_LDAP_FILTER is required when you specify LDAP-MAILCOW_SOGO_LDAP_FILTER')
-
-    config['LDAP_FILTER'] = os.environ[
-        'LDAP-MAILCOW_LDAP_FILTER'] if 'LDAP-MAILCOW_LDAP_FILTER' in os.environ else '(&(objectClass=user)(objectCategory=person))'
-    config['SOGO_LDAP_FILTER'] = os.environ[
-        'LDAP-MAILCOW_SOGO_LDAP_FILTER'] if 'LDAP-MAILCOW_SOGO_LDAP_FILTER' in os.environ else "objectClass='user' AND objectCategory='person'"
-
-    return config
+    with open('config.ini', 'r') as config_file:
+        return dict(
+            map(lambda x: (x.split('=')[0], x.split('=')[1].strip()), config_file.readlines()))
 
 
 def read_dovecot_passdb_conf_template():
-    with open('templates/dovecot/ldap/passdb.conf') as f:
-        data = Template(f.read())
-
-    return data.substitute(
-        ldap_uri=config['LDAP_URI'],
-        ldap_base_dn=config['LDAP_BASE_DN'],
-        ldap_bind_dn=config['LDAP_BIND_DN'],
-        ldap_bind_dn_password=config['LDAP_BIND_DN_PASSWORD']
-    )
-
-
-def read_sogo_plist_ldap_template():
-    with open('templates/sogo/plist_ldap') as f:
-        data = Template(f.read())
-
-    return data.substitute(
-        ldap_uri=config['LDAP_URI'],
-        ldap_base_dn=config['LDAP_BASE_DN'],
-        ldap_bind_dn=config['LDAP_BIND_DN'],
-        ldap_bind_dn_password=config['LDAP_BIND_DN_PASSWORD'],
-        sogo_ldap_filter=config['SOGO_LDAP_FILTER']
-    )
+    with open('templates/dovecot/ldap/passdb.conf', 'r') as template:
+        return Template(template.read())
 
 
 def read_dovecot_extra_conf():
-    with open('templates/dovecot/extra.conf') as f:
-        data = f.read()
+    with open('templates/dovecot/extra.conf', 'r') as template:
+        return Template(template.read())
 
-    return data
+
+def read_sogo_plist_ldap_template():
+    with open('templates/sogo/plist_ldap', 'r') as template:
+        return Template(template.read())
+
+
+def apply_config(file_path, **kwargs):
+    config_data = kwargs.get('config_data', None)
+    if not config_data:
+        return False
+
+    with open(file_path, 'w') as config_file:
+        config_file.write(config_data.substitute(**config))
+
+    return True
 
 
 if __name__ == '__main__':
